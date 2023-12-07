@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snapchat Caption Editor - Dark Mode</title>
+  <style>
+    /* Styles for the dark mode */
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #1a1a1a;
+      margin: 0;
+      color: #fff;
+    }
+    .container {
+      text-align: center;
+      background-color: #333;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #dropArea {
+      border: 2px dashed #888;
+      padding: 20px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      background-color: #444;
+      color: #fff;
+    }
+    input[type="text"],
+    button {
+      padding: 10px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      color: #333;
+      background-color: #fff;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #canvas {
+      border: 1px solid #888;
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 20px;
+ #textSizeSlider, #boxWidthSlider, #verticalPositionSlider {
+      width: 100%;
+    }
+
+    #captionInput {
+      width: 80%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="dropArea">
+      <p>Drag & Drop or <input type="file" id="imageInput" accept="image/*"> Click here to choose an image</p>
+    </div>
+    <input type="text" id="captionInput" placeholder="Enter your caption">
+    <label for="textSizeSlider">Text Size</label>
+    <input type="range" min="10" max="60" value="24" id="textSizeSlider" name="textSize">
+    <label for="boxWidthSlider">Box Width</label>
+    <input type="range" min="50" id="boxWidthSlider" name="boxWidth">
+    <label for="verticalPositionSlider">Vertical Position</label>
+    <input type="range" min="0" max="500" value="500" id="verticalPositionSlider" name="verticalPosition">
+    <button onclick="applyCaption()">Add Caption</button>
+    <button onclick="downloadImage()">Download Image</button>
+    <div id="canvas-container">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let img = new Image();
+    let caption = '';
+    let textSize = 24;
+    let boxWidth = 200; // Initial width
+    let verticalPosition = 500; // Start from the bottom
+
+    function loadImage(file) {
+      const reader = new FileReader();
+
+      reader.onload = function(event) {
+        img.onload = function() {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          boxWidth = img.width; // Set box width to image width
+          boxWidthSlider.setAttribute('max', img.width.toString());
+          boxWidthSlider.value = img.width.toString(); // Set default to image width
+          const maxHeight = img.height; // Reverse the range
+          verticalPositionSlider.setAttribute('max', maxHeight.toString());
+          verticalPositionSlider.value = maxHeight.toString(); // Set default to bottom
+          drawCaption();
+        };
+        img.src = event.target.result;
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function drawCaption() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(img, 0, 0);
+
+      ctx.font = `lighter ${textSize}px 'Avenir Next', sans-serif`;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const text = caption;
+      const textWidth = ctx.measureText(text).width;
+      const x = canvas.width / 2;
+      const y = canvas.height - verticalPosition; // Reverse y-coordinate
+
+      const boxHeight = textSize + 20; // Adjusting padding
+
+      ctx.fillRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight);
+
+      ctx.fillStyle = '#fff';
+      ctx.fillText(text, x, y);
+    }
+
+    function applyCaption() {
+      caption = document.getElementById('captionInput').value;
+      drawCaption();
+    }
+
+    function downloadImage() {
+      const downloadLink = document.createElement('a');
+      downloadLink.setAttribute('download', `${img.src.split('/').pop().split('.')[0]}_snapcap.png`);
+      const dataURL = canvas.toDataURL('image/png');
+      const url = dataURL.replace(/^data:image\/png/, 'data:application/octet-stream');
+      downloadLink.setAttribute('href', url);
+      downloadLink.click();
+    }
+
+    const dropArea = document.getElementById('dropArea');
+    const imageInput = document.getElementById('imageInput');
+    const textSizeSlider = document.getElementById('textSizeSlider');
+    const boxWidthSlider = document.getElementById('boxWidthSlider');
+    const verticalPositionSlider = document.getElementById('verticalPositionSlider');
+
+    textSizeSlider.addEventListener('input', function() {
+      textSize = parseInt(textSizeSlider.value);
+      drawCaption();
+    });
+
+    boxWidthSlider.addEventListener('input', function() {
+      boxWidth = parseInt(boxWidthSlider.value);
+      drawCaption();
+    });
+
+    verticalPositionSlider.addEventListener('input', function() {
+      verticalPosition = parseInt(verticalPositionSlider.value);
+      drawCaption();
+    });
+
+    dropArea.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropArea.style.border = '2px solid #007bff';
+    });
+
+    dropArea.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      dropArea.style.border = '2px dashed #888';
+    });
+
+    dropArea.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropArea.style.border = '2px dashed #888';
+      const file = e.dataTransfer.files[0];
+      loadImage(file);
+    });
+
+    imageInput.addEventListener('change', function() {
+      const file = imageInput.files[0];
+      loadImage(file);
+    });
+  </script>
+</body>
+</html>
